@@ -5,6 +5,9 @@ static const int SCREEN_WIDTH = 640;
 static const int SCREEN_HEIGHT = 360;
 static const float PI = 3.1414;
 
+static const float OUT_OF_SCREEN_X = -375.0f;
+static const float START_OF_SCREEN_X = 375.0f;
+
 // Debug?
 static gueepo::Texture* pinkTexture = nullptr;
 
@@ -47,9 +50,12 @@ static struct {
 } improvisedTiles;
 
 // Obstacles...
-static float OBSTACLE_SPEED = 50.0f;
+static float OBSTACLE_SPEED = 75.0f;
+static const float SPIKE_BLOCK_SPACING = 225.0f;
 static const int SPIKE_BLOCK_ANIMATION_COUNT = 4;
-static const int SPIKE_BLOCK_COUNT = 3;
+static const int SPIKE_BLOCK_COUNT = 4;
+static const float SPIKE_BLOCK_MAX_Y = 120;
+static const float SPIKE_BLOCK_MIN_Y = -120;
 static gueepo::Texture* spikeBlock = nullptr;
 static struct {
 	gueepo::TextureRegion* AnimationFrames[SPIKE_BLOCK_ANIMATION_COUNT];
@@ -61,6 +67,12 @@ static struct {
 	gueepo::math::vec2 Size;
 	gueepo::math::rect CollisionRect;
 } SpikeBlock[SPIKE_BLOCK_COUNT];
+
+static const float GetRandomSpikeBlockY() {
+	float RandomValue = gueepo::rand::Float();
+	float YPosition = SPIKE_BLOCK_MIN_Y + (RandomValue * (SPIKE_BLOCK_MAX_Y - SPIKE_BLOCK_MIN_Y));
+	return YPosition;
+}
 
 class GLAPPY : public gueepo::Application {
 public:
@@ -79,6 +91,8 @@ private:
 };
 
 void GLAPPY::Application_OnInitialize() {
+	gueepo::rand::Init();
+
 	m_camera = new gueepo::OrtographicCamera(SCREEN_WIDTH, SCREEN_HEIGHT);
 	m_camera->SetBackgroundColor(0.1f, 0.5f, 0.6f, 1.0f);
 
@@ -114,11 +128,11 @@ void GLAPPY::Application_OnInitialize() {
 	*/
 	
 	// Setting up Obstacles
-	float BlockPosition = 0.0f;
+	float BlockPosition = START_OF_SCREEN_X;
 	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
 		SpikeBlock[i].Position.x = BlockPosition;
-		SpikeBlock[i].Position.y = 0.0f;
-		BlockPosition += 256.0f;
+		SpikeBlock[i].Position.y = GetRandomSpikeBlockY();
+		BlockPosition += SPIKE_BLOCK_SPACING;
 
 		SpikeBlock[i].Size.x = 108.0f;
 		SpikeBlock[i].Size.y = 104.0f;
@@ -211,12 +225,16 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		}
 	}
 
-	if (Collided) {
+	if (Collided || MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
 		LOG_INFO("Player Collided :(");
 	}
 
-	if (MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
-		// todo: DEATH!
+	// Relocating Blocks
+	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+		if (SpikeBlock[i].Position.x < OUT_OF_SCREEN_X) {
+			SpikeBlock[i].Position.x += SPIKE_BLOCK_SPACING * SPIKE_BLOCK_COUNT;
+			SpikeBlock[i].Position.y = GetRandomSpikeBlockY();
+		}
 	}
 }
 
