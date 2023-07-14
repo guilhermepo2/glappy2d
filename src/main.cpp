@@ -182,15 +182,37 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 	}
 
 	// Updating Collision
-	MainBird.CollisionRect.bottomLeft.x = (MainBird.Position.x - (MainBird.Size.x / 2.0f));
-	MainBird.CollisionRect.bottomLeft.y = (MainBird.Position.y - (MainBird.Size.y / 2.0f));
-	MainBird.CollisionRect.topRight.x = (MainBird.Position.x + (MainBird.Size.x / 2.0f));
-	MainBird.CollisionRect.topRight.y = (MainBird.Position.y + (MainBird.Size.y / 2.0f));
+	MainBird.CollisionRect.bottomLeft.x = 
+		(MainBird.Position.x - (gueepo::math::abs(MainBird.Size.x) / 3.0f));
+	MainBird.CollisionRect.bottomLeft.y = 
+		(MainBird.Position.y - (gueepo::math::abs(MainBird.Size.y) / 3.0f));
+	MainBird.CollisionRect.topRight.x = 
+		(MainBird.Position.x + (gueepo::math::abs(MainBird.Size.x) / 3.0f));
+	MainBird.CollisionRect.topRight.y = 
+		(MainBird.Position.y + (gueepo::math::abs(MainBird.Size.y) / 3.0f));
+
 	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
-		SpikeBlock[i].CollisionRect.bottomLeft.x = (SpikeBlock[i].Position.x - (SpikeBlock[i].Size.x / 2.0f));
-		SpikeBlock[i].CollisionRect.bottomLeft.y = (SpikeBlock[i].Position.y - (SpikeBlock[i].Size.y / 2.0f));
-		SpikeBlock[i].CollisionRect.topRight.x = (SpikeBlock[i].Position.x + (SpikeBlock[i].Size.x / 2.0f));
-		SpikeBlock[i].CollisionRect.topRight.y = (SpikeBlock[i].Position.y + (SpikeBlock[i].Size.y / 2.0f));
+		SpikeBlock[i].CollisionRect.bottomLeft.x = 
+			(SpikeBlock[i].Position.x - (gueepo::math::abs(SpikeBlock[i].Size.x) / 3.0f));
+		SpikeBlock[i].CollisionRect.bottomLeft.y = 
+			(SpikeBlock[i].Position.y - (gueepo::math::abs(SpikeBlock[i].Size.y) / 3.0f));
+		SpikeBlock[i].CollisionRect.topRight.x = 
+			(SpikeBlock[i].Position.x + (gueepo::math::abs(SpikeBlock[i].Size.x) / 3.0f));
+		SpikeBlock[i].CollisionRect.topRight.y = 
+			(SpikeBlock[i].Position.y + (gueepo::math::abs(SpikeBlock[i].Size.y) / 3.0f));
+	}
+
+	// Checking for Collisions
+	bool Collided = false;
+	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+		if (MainBird.CollisionRect.Intersect(SpikeBlock[i].CollisionRect)) {
+			Collided = true;
+			break;
+		}
+	}
+
+	if (Collided) {
+		LOG_INFO("Player Collided :(");
 	}
 
 	if (MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
@@ -259,6 +281,24 @@ void GLAPPY::Application_OnRender() {
 		static_cast<int>(MainBird.CollisionRect.GetSize().x),
 		static_cast<int>(MainBird.CollisionRect.GetSize().y),
 		gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
+	);
+
+	gueepo::Renderer::Draw(
+		pinkTexture,
+		MainBird.CollisionRect.bottomLeft.x,
+		MainBird.CollisionRect.bottomLeft.y,
+		5,
+		5,
+		gueepo::Color(0.1f, 1.0f, 0.1f, 0.3f)
+	);
+
+	gueepo::Renderer::Draw(
+		pinkTexture,
+		MainBird.CollisionRect.topRight.x,
+		MainBird.CollisionRect.topRight.y,
+		5,
+		5,
+		gueepo::Color(0.1f, 1.0f, 0.1f, 0.3f)
 	);
 
 	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
