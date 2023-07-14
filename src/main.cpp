@@ -4,6 +4,7 @@
 static const int SCREEN_WIDTH = 640;
 static const int SCREEN_HEIGHT = 360;
 static const float PI = 3.1414;
+static bool IsDebugEnabled = false;
 
 static const float OUT_OF_SCREEN_X = -375.0f;
 static const float START_OF_SCREEN_X = 375.0f;
@@ -63,6 +64,8 @@ static struct {
 } improvisedTiles;
 
 // Obstacles...
+static int PlayerScore = 0;
+
 static float OBSTACLE_SPEED = 75.0f;
 static const float SPIKE_BLOCK_SPACING = 225.0f;
 static const int SPIKE_BLOCK_ANIMATION_COUNT = 4;
@@ -79,6 +82,9 @@ static struct {
 	gueepo::math::vec2 Position;
 	gueepo::math::vec2 Size;
 	gueepo::math::rect CollisionRect;
+
+	gueepo::math::rect ScoreRect;
+	bool IsScoreRegionEnabled;
 } SpikeBlock[SPIKE_BLOCK_COUNT];
 
 static const float GetRandomSpikeBlockY() {
@@ -133,12 +139,11 @@ void GLAPPY::Application_OnInitialize() {
 		}
 	}
 
-	// gueepo::Font* kenneySquareMiniFontFile = gueepo::Font::CreateNewFont("./assets/Kenney Fonts/Fonts/Kenney Mini Square Mono.ttf");
-	/*
+	// Loading up Font
+	gueepo::Font* kenneySquareMiniFontFile = gueepo::Font::CreateNewFont("./assets/Kenney Fonts/Fonts/Kenney Mini Square Mono.ttf");
 	if (kenneySquareMiniFontFile != nullptr) {
 		m_kenneySquareMini = new gueepo::FontSprite(kenneySquareMiniFontFile, 48);
 	}
-	*/
 	
 	// Setting up Obstacles
 	float BlockPosition = START_OF_SCREEN_X;
@@ -149,6 +154,7 @@ void GLAPPY::Application_OnInitialize() {
 
 		SpikeBlock[i].Size.x = 108.0f;
 		SpikeBlock[i].Size.y = 104.0f;
+		SpikeBlock[i].IsScoreRegionEnabled = true;
 	}
 
 	// Setting up Background
@@ -163,6 +169,10 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 	if (currentInputState.Mouse.WasMouseKeyPressedThisFrame(gueepo::Mousecode::MOUSE_LEFT)) {
 		MainBird.Acceleration.y = JUMP_UP;
 		MainBird.Rotation = MAX_ROTATION;
+	}
+
+	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
+		IsDebugEnabled = !IsDebugEnabled;
 	}
 
 	// DEBUG
@@ -243,6 +253,12 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 			(SpikeBlock[i].Position.x + (gueepo::math::abs(SpikeBlock[i].Size.x) / 3.0f));
 		SpikeBlock[i].CollisionRect.topRight.y = 
 			(SpikeBlock[i].Position.y + (gueepo::math::abs(SpikeBlock[i].Size.y) / 3.0f));
+
+		SpikeBlock[i].ScoreRect.bottomLeft.x = SpikeBlock[i].Position.x - 5.0f;
+		SpikeBlock[i].ScoreRect.topRight.x = SpikeBlock[i].Position.x + 5.0f;
+
+		SpikeBlock[i].ScoreRect.bottomLeft.y = SpikeBlock[i].Position.y - 350.0f;
+		SpikeBlock[i].ScoreRect.topRight.y = SpikeBlock[i].Position.y + 350.0f;
 	}
 
 	// Checking for Collisions
@@ -252,7 +268,16 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 			Collided = true;
 			break;
 		}
+
+		if (
+			SpikeBlock[i].IsScoreRegionEnabled && 
+			MainBird.CollisionRect.Intersect(SpikeBlock[i].ScoreRect)) {
+			PlayerScore++;
+			SpikeBlock[i].IsScoreRegionEnabled = false;
+		}
 	}
+
+	// todo: Check for Collisions against Scores
 
 	if (Collided || MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
 		LOG_INFO("Player Collided :(");
@@ -263,6 +288,8 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		if (SpikeBlock[i].Position.x < OUT_OF_SCREEN_X) {
 			SpikeBlock[i].Position.x += SPIKE_BLOCK_SPACING * SPIKE_BLOCK_COUNT;
 			SpikeBlock[i].Position.y = GetRandomSpikeBlockY();
+
+			SpikeBlock[i].IsScoreRegionEnabled = true;
 		}
 	}
 }
@@ -325,54 +352,65 @@ void GLAPPY::Application_OnRender() {
 		);
 	}
 
-	/*
-	float textWidth = m_kenneySquareMini->GetWidthOf("gueepo2D");
+	// Rendering the Score
+	std::string ScoreString = std::to_string(PlayerScore);
+	float textWidth = m_kenneySquareMini->GetWidthOf(ScoreString.c_str());
 	gueepo::Renderer::DrawString(
 		m_kenneySquareMini, 
-		"gueepo2D", 
-		gueepo::math::vec2(-textWidth/2.0f, -50.0f), 
+		ScoreString.c_str(),
+		gueepo::math::vec2(-textWidth/2.0f, 140.0f), 
 		1.0f, 
 		gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f)
 	);
-	*/
 
 	// DEBUG. DRAWING COLLISIONS
-	gueepo::Renderer::Draw(
-		pinkTexture,
-		static_cast<int>(MainBird.Position.x),
-		static_cast<int>(MainBird.Position.y),
-		static_cast<int>(MainBird.CollisionRect.GetSize().x),
-		static_cast<int>(MainBird.CollisionRect.GetSize().y),
-		gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
-	);
-
-	gueepo::Renderer::Draw(
-		pinkTexture,
-		MainBird.CollisionRect.bottomLeft.x,
-		MainBird.CollisionRect.bottomLeft.y,
-		5,
-		5,
-		gueepo::Color(0.1f, 1.0f, 0.1f, 0.3f)
-	);
-
-	gueepo::Renderer::Draw(
-		pinkTexture,
-		MainBird.CollisionRect.topRight.x,
-		MainBird.CollisionRect.topRight.y,
-		5,
-		5,
-		gueepo::Color(0.1f, 1.0f, 0.1f, 0.3f)
-	);
-
-	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+	if (IsDebugEnabled) {
 		gueepo::Renderer::Draw(
 			pinkTexture,
-			static_cast<int>(SpikeBlock[i].Position.x),
-			static_cast<int>(SpikeBlock[i].Position.y),
-			static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().x),
-			static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().y),
-			gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
+			static_cast<int>(MainBird.Position.x),
+			static_cast<int>(MainBird.Position.y),
+			static_cast<int>(MainBird.CollisionRect.GetSize().x),
+			static_cast<int>(MainBird.CollisionRect.GetSize().y),
+			gueepo::Color(0.0f, 0.0f, 1.0f, 0.5f)
 		);
+
+		gueepo::Renderer::Draw(
+			pinkTexture,
+			MainBird.CollisionRect.bottomLeft.x,
+			MainBird.CollisionRect.bottomLeft.y,
+			5,
+			5,
+			gueepo::Color(0.1f, 1.0f, 0.1f, 0.5f)
+		);
+
+		gueepo::Renderer::Draw(
+			pinkTexture,
+			MainBird.CollisionRect.topRight.x,
+			MainBird.CollisionRect.topRight.y,
+			5,
+			5,
+			gueepo::Color(0.1f, 1.0f, 0.1f, 0.5f)
+		);
+
+		for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+			gueepo::Renderer::Draw(
+				pinkTexture,
+				static_cast<int>(SpikeBlock[i].Position.x),
+				static_cast<int>(SpikeBlock[i].Position.y),
+				static_cast<int>(SpikeBlock[i].ScoreRect.GetSize().x),
+				static_cast<int>(SpikeBlock[i].ScoreRect.GetSize().y),
+				gueepo::Color(0.0f, 0.0f, 1.0f, 0.5f)
+			);
+
+			gueepo::Renderer::Draw(
+				pinkTexture,
+				static_cast<int>(SpikeBlock[i].Position.x),
+				static_cast<int>(SpikeBlock[i].Position.y),
+				static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().x),
+				static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().y),
+				gueepo::Color(1.0f, 0.1f, 0.1f, 0.5f)
+			);
+		}
 	}
 
 	gueepo::Renderer::EndFrame();
