@@ -59,6 +59,7 @@ static struct {
 
 	gueepo::math::vec2 Position;
 	gueepo::math::vec2 Size;
+	gueepo::math::rect CollisionRect;
 } SpikeBlock[SPIKE_BLOCK_COUNT];
 
 class GLAPPY : public gueepo::Application {
@@ -185,6 +186,12 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 	MainBird.CollisionRect.bottomLeft.y = (MainBird.Position.y - (MainBird.Size.y / 2.0f));
 	MainBird.CollisionRect.topRight.x = (MainBird.Position.x + (MainBird.Size.x / 2.0f));
 	MainBird.CollisionRect.topRight.y = (MainBird.Position.y + (MainBird.Size.y / 2.0f));
+	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+		SpikeBlock[i].CollisionRect.bottomLeft.x = (SpikeBlock[i].Position.x - (SpikeBlock[i].Size.x / 2.0f));
+		SpikeBlock[i].CollisionRect.bottomLeft.y = (SpikeBlock[i].Position.y - (SpikeBlock[i].Size.y / 2.0f));
+		SpikeBlock[i].CollisionRect.topRight.x = (SpikeBlock[i].Position.x + (SpikeBlock[i].Size.x / 2.0f));
+		SpikeBlock[i].CollisionRect.topRight.y = (SpikeBlock[i].Position.y + (SpikeBlock[i].Size.y / 2.0f));
+	}
 
 	if (MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
 		// todo: DEATH!
@@ -222,16 +229,6 @@ void GLAPPY::Application_OnRender() {
 		MainBird.Rotation
 	);
 
-	// DEBUG. DRAWING COLLISIONS
-	gueepo::Renderer::Draw(
-		pinkTexture,
-		static_cast<int>(MainBird.Position.x),
-		static_cast<int>(MainBird.Position.y),
-		static_cast<int>(MainBird.CollisionRect.GetSize().x),
-		static_cast<int>(MainBird.CollisionRect.GetSize().y),
-		gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
-	);
-
 	// Rendering the Obstacles
 	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
 		gueepo::Renderer::Draw(
@@ -253,6 +250,28 @@ void GLAPPY::Application_OnRender() {
 		gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f)
 	);
 	*/
+
+	// DEBUG. DRAWING COLLISIONS
+	gueepo::Renderer::Draw(
+		pinkTexture,
+		static_cast<int>(MainBird.Position.x),
+		static_cast<int>(MainBird.Position.y),
+		static_cast<int>(MainBird.CollisionRect.GetSize().x),
+		static_cast<int>(MainBird.CollisionRect.GetSize().y),
+		gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
+	);
+
+	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+		gueepo::Renderer::Draw(
+			pinkTexture,
+			static_cast<int>(SpikeBlock[i].Position.x),
+			static_cast<int>(SpikeBlock[i].Position.y),
+			static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().x),
+			static_cast<int>(SpikeBlock[i].CollisionRect.GetSize().y),
+			gueepo::Color(1.0f, 1.0f, 1.0f, 0.3f)
+		);
+	}
+
 	gueepo::Renderer::EndFrame();
 }
 

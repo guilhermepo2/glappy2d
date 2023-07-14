@@ -16,6 +16,7 @@ DONE 1.2 Bottom Obstacles
 Score (Very Important)
 
 Environment (Fancy!!)
+1.1 BACKGROUND (Get the green tile, render a bunch of them in a square, move the whole thing up and down)
 
 UI
 1.1 SCORE TEXT
