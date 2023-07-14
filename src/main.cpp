@@ -11,6 +11,19 @@ static const float START_OF_SCREEN_X = 375.0f;
 // Debug?
 static gueepo::Texture* pinkTexture = nullptr;
 
+// Background
+static const float MAX_BACKGROUND_OFFSET = 32.0f;
+static const float BACKGROUND_SPEED = 5.0f;
+static struct {
+	gueepo::Texture* backgroundTexture;
+	gueepo::math::vec2 Position;
+	int Width;
+	int Height;
+
+	float CurrentOffset = 0.0f;
+	int Direction = 1;
+} Background;
+
 // The Bird
 static const float GRAVITY = 250.0;
 static float JUMP_UP = 165.0f;
@@ -137,6 +150,13 @@ void GLAPPY::Application_OnInitialize() {
 		SpikeBlock[i].Size.x = 108.0f;
 		SpikeBlock[i].Size.y = 104.0f;
 	}
+
+	// Setting up Background
+	Background.backgroundTexture = gueepo::Texture::Create("./assets/glappy/Green.png");
+	Background.Width = 12;
+	Background.Height = 12;
+	Background.Position.x = -300.0f;
+	Background.Position.y = -150.0f;
 }
 
 void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
@@ -162,6 +182,15 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 }
 
 void GLAPPY::Application_OnUpdate(float DeltaTime) {
+	// Background
+	Background.CurrentOffset += DeltaTime * Background.Direction * BACKGROUND_SPEED;
+	if (Background.Direction < 0 && Background.CurrentOffset < 0) {
+		Background.Direction = 1;
+	}
+	else if (Background.Direction > 0 && Background.CurrentOffset > MAX_BACKGROUND_OFFSET) {
+		Background.Direction = -1;
+	}
+
 	// Updating Main Bird Animation
 	MainBird.TimeInCurrentFrame += DeltaTime;
 
@@ -246,6 +275,22 @@ void GLAPPY::Application_OnRender() {
 	gueepo::Renderer::BeginFrame(*m_camera);
 	gueepo::Color bgColor = m_camera->GetBackGroundColor();
 	gueepo::Renderer::Clear(bgColor.rgba);
+
+	// Drawing the Background
+	float BackgroundX = Background.Position.x;
+	float BackgroundY = Background.Position.y;
+	for (int i = 0; i < Background.Height; i++) {
+		BackgroundX = Background.Position.x;
+		for (int j = 0; j < Background.Width; j++) {
+			gueepo::Renderer::Draw(
+				Background.backgroundTexture,
+				BackgroundX,
+				BackgroundY + static_cast<int>(Background.CurrentOffset)
+			);
+			BackgroundX += 64.0f;
+		}
+		BackgroundY += 64.0f;
+	}
 
 	// drawing the floor...
 	int x_position = -320;
