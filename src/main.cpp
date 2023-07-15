@@ -5,6 +5,12 @@ static const int SCREEN_WIDTH = 640;
 static const int SCREEN_HEIGHT = 360;
 static const float PI = 3.1414;
 
+// Audio
+static gueepo::AudioClip* scoreAudioClip;
+static gueepo::AudioClip* flapAudioClip;
+static gueepo::AudioClip* deathAudioClip;
+static gueepo::AudioClip* selectAudioClip;
+
 // Game Settings
 static const float OUT_OF_SCREEN_X = -375.0f;
 static const float START_OF_SCREEN_X = 375.0f;
@@ -202,6 +208,12 @@ void GLAPPY::Application_OnInitialize() {
 	Background.Position.x = -300.0f;
 	Background.Position.y = -150.0f;
 
+	// Audio
+	scoreAudioClip = gueepo::Audio::CreateAudioClip("./assets/glappy/score.wav");
+	flapAudioClip = gueepo::Audio::CreateAudioClip("./assets/glappy/jump.wav");
+	deathAudioClip = gueepo::Audio::CreateAudioClip("./assets/glappy/death.wav");
+	selectAudioClip = gueepo::Audio::CreateAudioClip("./assets/glappy/select.wav");
+
 	RestartGame();
 }
 
@@ -214,12 +226,14 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 			CurrentState = GameState::GAMEPLAY;
 			MainBird.Acceleration.y = CurrentJumpUp;
 			MainBird.Rotation = MAX_ROTATION;
+			gueepo::Audio::Play(selectAudioClip);
 		}
 	} break;
 	case GameState::GAMEPLAY: {
 		if (currentInputState.Mouse.WasMouseKeyPressedThisFrame(gueepo::Mousecode::MOUSE_LEFT)) {
 			MainBird.Acceleration.y = CurrentJumpUp;
 			MainBird.Rotation = MAX_ROTATION;
+			gueepo::Audio::Play(flapAudioClip);
 		}
 	} break;
 	case GameState::DEAD: {
@@ -228,6 +242,7 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 			CurrentState = GameState::GAMEPLAY;
 			MainBird.Acceleration.y = CurrentJumpUp;
 			MainBird.Rotation = MAX_ROTATION;
+			gueepo::Audio::Play(selectAudioClip);
 		}
 	} break;
 	}
@@ -343,11 +358,13 @@ void UpdateGameplay(float DeltaTime) {
 			MainBird.CollisionRect.Intersect(SpikeBlock[i].ScoreRect)) {
 			PlayerScore++;
 			SpikeBlock[i].IsScoreRegionEnabled = false;
+			gueepo::Audio::Play(scoreAudioClip);
 		}
 	}
 
 	if (Collided || MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
 		CurrentState = GameState::DEAD;
+		gueepo::Audio::Play(deathAudioClip);
 	}
 
 	// Relocating Blocks
