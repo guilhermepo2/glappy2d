@@ -17,6 +17,14 @@ static const float STARTER_OBSTACLE_SPEED = 75.0f;
 static float TimeElapsed = 0.0f;
 static float NextIncreaseTime = TIME_TO_INCREASE_DIFFICULTY;
 
+// Game Flow
+enum class GameState {
+	INTRO,
+	GAMEPLAY,
+	DEAD
+};
+static GameState CurrentState = GameState::INTRO;
+
 // Debug
 static gueepo::Texture* pinkTexture = nullptr;
 static bool IsDebugEnabled = false;
@@ -44,9 +52,11 @@ static const float DEATH_Y_MIN = -180.0f;
 static const float DEATH_Y_MAX = 180.0f;
 static const int BIRD_ANIMATION_FRAMES_COUNT = 9;
 static gueepo::Texture* bluebirdTexture;
+static const float STARTER_FRAME_TIME = 0.075f;
+static const float MIN_FRAME_TIME = 0.025f;
 static struct {
 	gueepo::TextureRegion* AnimationFrames[BIRD_ANIMATION_FRAMES_COUNT];
-	const float TimeInFrame = 0.075f;
+	float TimeInFrame = 0.075f;
 	float TimeInCurrentFrame = 0.0f;
 	int CurrentFrame = 0;
 
@@ -118,6 +128,36 @@ private:
 	gueepo::OrtographicCamera* m_camera = nullptr;
 };
 
+static void InitializeBird() {
+	MainBird.Position.y = 0.0f;
+	MainBird.Acceleration.y = 0.0f;
+	MainBird.Rotation = 0.0f;
+	MainBird.TimeInFrame = STARTER_FRAME_TIME;
+}
+
+static void InitializeObstacles() {
+	float BlockPosition = START_OF_SCREEN_X;
+	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+		SpikeBlock[i].Position.x = BlockPosition;
+		SpikeBlock[i].Position.y = GetRandomSpikeBlockY();
+		BlockPosition += SPIKE_BLOCK_SPACING;
+
+		SpikeBlock[i].Size.x = 108.0f;
+		SpikeBlock[i].Size.y = 104.0f;
+		SpikeBlock[i].IsScoreRegionEnabled = true;
+	}
+}
+
+static void RestartGame() {
+	InitializeBird();
+	InitializeObstacles();
+
+	CurrentObstacleSpeed = STARTER_OBSTACLE_SPEED;
+	CurrentGravity = STARTER_GRAVITY;
+	CurrentJumpUp = STARTER_JUMP_UP;
+	PlayerScore = 0;
+}
+
 void GLAPPY::Application_OnInitialize() {
 	gueepo::rand::Init();
 
@@ -152,18 +192,7 @@ void GLAPPY::Application_OnInitialize() {
 	gueepo::Font* kenneySquareMiniFontFile = gueepo::Font::CreateNewFont("./assets/Kenney Fonts/Fonts/Kenney Mini Square Mono.ttf");
 	if (kenneySquareMiniFontFile != nullptr) {
 		m_kenneySquareMini = new gueepo::FontSprite(kenneySquareMiniFontFile, 48);
-	}
-	
-	// Setting up Obstacles
-	float BlockPosition = START_OF_SCREEN_X;
-	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
-		SpikeBlock[i].Position.x = BlockPosition;
-		SpikeBlock[i].Position.y = GetRandomSpikeBlockY();
-		BlockPosition += SPIKE_BLOCK_SPACING;
-
-		SpikeBlock[i].Size.x = 108.0f;
-		SpikeBlock[i].Size.y = 104.0f;
-		SpikeBlock[i].IsScoreRegionEnabled = true;
+		m_kenneySquareMini->SetLineGap(-24.0f);
 	}
 
 	// Setting up Background
@@ -172,27 +201,49 @@ void GLAPPY::Application_OnInitialize() {
 	Background.Height = 12;
 	Background.Position.x = -300.0f;
 	Background.Position.y = -150.0f;
+
+	RestartGame();
 }
 
 void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
-	if (currentInputState.Mouse.WasMouseKeyPressedThisFrame(gueepo::Mousecode::MOUSE_LEFT)) {
-		MainBird.Acceleration.y = CurrentJumpUp;
-		MainBird.Rotation = MAX_ROTATION;
-	}
 
+	switch (CurrentState) {
+	case GameState::INTRO: {
+		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_E)) {
+			RestartGame();
+			CurrentState = GameState::GAMEPLAY;
+			MainBird.Acceleration.y = CurrentJumpUp;
+			MainBird.Rotation = MAX_ROTATION;
+		}
+	} break;
+	case GameState::GAMEPLAY: {
+		if (currentInputState.Mouse.WasMouseKeyPressedThisFrame(gueepo::Mousecode::MOUSE_LEFT)) {
+			MainBird.Acceleration.y = CurrentJumpUp;
+			MainBird.Rotation = MAX_ROTATION;
+		}
+	} break;
+	case GameState::DEAD: {
+		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_E)) {
+			RestartGame();
+			CurrentState = GameState::GAMEPLAY;
+			MainBird.Acceleration.y = CurrentJumpUp;
+			MainBird.Rotation = MAX_ROTATION;
+		}
+	} break;
+	}
+	
+
+	// DEBUG
 	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
 		IsDebugEnabled = !IsDebugEnabled;
 	}
 
-	// DEBUG
 	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_R)) {
-		MainBird.Position.y = 0.0f;
+		RestartGame();
 	}
 }
-
+static void UpdateGameplay(float DeltaTime);
 void GLAPPY::Application_OnUpdate(float DeltaTime) {
-	TimeElapsed += DeltaTime;
-
 	// Background
 	Background.CurrentOffset += DeltaTime * Background.Direction * BACKGROUND_SPEED;
 	if (Background.Direction < 0 && Background.CurrentOffset < 0) {
@@ -210,6 +261,22 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		MainBird.TimeInCurrentFrame = 0.0f;
 	}
 
+	switch (CurrentState) {
+	case GameState::INTRO: {
+
+	} break;
+	case GameState::GAMEPLAY: {
+		TimeElapsed += DeltaTime;
+		UpdateGameplay(DeltaTime);
+	} break;
+	case GameState::DEAD: {
+		MainBird.Position.y -= DeltaTime;
+		MainBird.Rotation += DeltaTime;
+	} break;
+	}
+}
+
+void UpdateGameplay(float DeltaTime) {
 	// Applying Gravity to the Bird
 	MainBird.Acceleration.y -= (CurrentGravity * DeltaTime);
 	MainBird.Position.y += (MainBird.Acceleration.y * DeltaTime);
@@ -237,23 +304,23 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 	}
 
 	// Updating Collision
-	MainBird.CollisionRect.bottomLeft.x = 
+	MainBird.CollisionRect.bottomLeft.x =
 		(MainBird.Position.x - (gueepo::math::abs(MainBird.Size.x) / 3.0f));
-	MainBird.CollisionRect.bottomLeft.y = 
+	MainBird.CollisionRect.bottomLeft.y =
 		(MainBird.Position.y - (gueepo::math::abs(MainBird.Size.y) / 3.0f));
-	MainBird.CollisionRect.topRight.x = 
+	MainBird.CollisionRect.topRight.x =
 		(MainBird.Position.x + (gueepo::math::abs(MainBird.Size.x) / 3.0f));
-	MainBird.CollisionRect.topRight.y = 
+	MainBird.CollisionRect.topRight.y =
 		(MainBird.Position.y + (gueepo::math::abs(MainBird.Size.y) / 3.0f));
 
 	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
-		SpikeBlock[i].CollisionRect.bottomLeft.x = 
+		SpikeBlock[i].CollisionRect.bottomLeft.x =
 			(SpikeBlock[i].Position.x - (gueepo::math::abs(SpikeBlock[i].Size.x) / 3.0f));
-		SpikeBlock[i].CollisionRect.bottomLeft.y = 
+		SpikeBlock[i].CollisionRect.bottomLeft.y =
 			(SpikeBlock[i].Position.y - (gueepo::math::abs(SpikeBlock[i].Size.y) / 3.0f));
-		SpikeBlock[i].CollisionRect.topRight.x = 
+		SpikeBlock[i].CollisionRect.topRight.x =
 			(SpikeBlock[i].Position.x + (gueepo::math::abs(SpikeBlock[i].Size.x) / 3.0f));
-		SpikeBlock[i].CollisionRect.topRight.y = 
+		SpikeBlock[i].CollisionRect.topRight.y =
 			(SpikeBlock[i].Position.y + (gueepo::math::abs(SpikeBlock[i].Size.y) / 3.0f));
 
 		SpikeBlock[i].ScoreRect.bottomLeft.x = SpikeBlock[i].Position.x - 5.0f;
@@ -272,7 +339,7 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		}
 
 		if (
-			SpikeBlock[i].IsScoreRegionEnabled && 
+			SpikeBlock[i].IsScoreRegionEnabled &&
 			MainBird.CollisionRect.Intersect(SpikeBlock[i].ScoreRect)) {
 			PlayerScore++;
 			SpikeBlock[i].IsScoreRegionEnabled = false;
@@ -280,8 +347,7 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 	}
 
 	if (Collided || MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
-		// todo: change state to death
-		LOG_INFO("Player Collided :(");
+		CurrentState = GameState::DEAD;
 	}
 
 	// Relocating Blocks
@@ -301,11 +367,16 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		CurrentObstacleSpeed = CurrentObstacleSpeed * DIFFICULTY_INCREASE_RATE;
 		CurrentJumpUp = CurrentJumpUp * JUMP_UP_DIFFICULTY_INCREASE;
 		CurrentGravity = CurrentGravity * DIFFICULTY_INCREASE_RATE;
+
+		MainBird.TimeInFrame = (MainBird.TimeInFrame / DIFFICULTY_INCREASE_RATE);
+		if (MainBird.TimeInFrame < MIN_FRAME_TIME) {
+			MainBird.TimeInFrame = MIN_FRAME_TIME;
+		}
 	}
 }
 
 void GLAPPY::Application_OnDeinitialize() {
-
+	// todo (lol)
 }
 
 void GLAPPY::Application_OnRender() {
@@ -342,7 +413,8 @@ void GLAPPY::Application_OnRender() {
 
 		x_position += 32;
 	}
-	
+
+	// Drawing the Bird!!
 	gueepo::Renderer::Draw(MainBird.AnimationFrames[MainBird.CurrentFrame],
 		static_cast<int>(MainBird.Position.x),
 		static_cast<int>(MainBird.Position.y),
@@ -351,27 +423,41 @@ void GLAPPY::Application_OnRender() {
 		MainBird.Rotation
 	);
 
-	// Rendering the Obstacles
-	for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
-		gueepo::Renderer::Draw(
-			SpikeBlock[i].AnimationFrames[SpikeBlock[i].CurrentFrame],
-			SpikeBlock[i].Position.x,
-			SpikeBlock[i].Position.y,
-			SpikeBlock[i].Size.x,
-			SpikeBlock[i].Size.y
-		);
-	}
+	// Drawing Specific Stuff
+	switch (CurrentState) {
+	case GameState::INTRO: {
+		gueepo::Renderer::DrawString(m_kenneySquareMini, "glappy2D", gueepo::math::vec2(-100.0f, 25.0f), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		gueepo::Renderer::DrawString(m_kenneySquareMini, "press 'e'\nto start", gueepo::math::vec2(-100.0f, -25.0f), 0.75f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
 
-	// Rendering the Score
-	std::string ScoreString = std::to_string(PlayerScore);
-	float textWidth = m_kenneySquareMini->GetWidthOf(ScoreString.c_str());
-	gueepo::Renderer::DrawString(
-		m_kenneySquareMini, 
-		ScoreString.c_str(),
-		gueepo::math::vec2(-textWidth/2.0f, 140.0f), 
-		1.0f, 
-		gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f)
-	);
+	} break;
+	case GameState::GAMEPLAY: {
+		// Rendering the Score
+		std::string ScoreString = std::to_string(PlayerScore);
+		float textWidth = m_kenneySquareMini->GetWidthOf(ScoreString.c_str());
+		gueepo::Renderer::DrawString(
+			m_kenneySquareMini,
+			ScoreString.c_str(),
+			gueepo::math::vec2(-textWidth / 2.0f, 140.0f),
+			1.0f,
+			gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f)
+		);
+
+		// Rendering the Obstacles
+		for (int i = 0; i < SPIKE_BLOCK_COUNT; i++) {
+			gueepo::Renderer::Draw(
+				SpikeBlock[i].AnimationFrames[SpikeBlock[i].CurrentFrame],
+				SpikeBlock[i].Position.x,
+				SpikeBlock[i].Position.y,
+				SpikeBlock[i].Size.x,
+				SpikeBlock[i].Size.y
+			);
+		}
+	} break;
+	case GameState::DEAD: {
+		gueepo::Renderer::DrawString(m_kenneySquareMini, "you died :(", gueepo::math::vec2(-100.0f, 25.0f), 1.0f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		gueepo::Renderer::DrawString(m_kenneySquareMini, "press 'e'\nto restart", gueepo::math::vec2(-100.0f, -25.0f), 0.75f, gueepo::Color(1.0f, 1.0f, 1.0f, 1.0f));
+	} break;
+	}
 
 	// DEBUG. DRAWING COLLISIONS
 	if (IsDebugEnabled) {
