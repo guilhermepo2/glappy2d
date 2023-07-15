@@ -25,7 +25,7 @@ UI
 DONE 1.1 SCORE TEXT
 
 Flow
-1.0 Make the game get harder with time
+DONE 1.0 Make the game get harder with time
 1.1 Press 'E' to start
 1.2 Game Over. Press 'E' to restart
 

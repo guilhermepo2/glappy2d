@@ -4,13 +4,22 @@
 static const int SCREEN_WIDTH = 640;
 static const int SCREEN_HEIGHT = 360;
 static const float PI = 3.1414;
-static bool IsDebugEnabled = false;
 
+// Game Settings
 static const float OUT_OF_SCREEN_X = -375.0f;
 static const float START_OF_SCREEN_X = 375.0f;
+static const float TIME_TO_INCREASE_DIFFICULTY = 5.0f;
+static const float DIFFICULTY_INCREASE_RATE = 1.1f;
+static const float JUMP_UP_DIFFICULTY_INCREASE = 1.02f;
+static const float STARTER_GRAVITY = 250.0;
+static const float STARTER_JUMP_UP = 165.0f;
+static const float STARTER_OBSTACLE_SPEED = 75.0f;
+static float TimeElapsed = 0.0f;
+static float NextIncreaseTime = TIME_TO_INCREASE_DIFFICULTY;
 
-// Debug?
+// Debug
 static gueepo::Texture* pinkTexture = nullptr;
+static bool IsDebugEnabled = false;
 
 // Background
 static const float MAX_BACKGROUND_OFFSET = 32.0f;
@@ -26,9 +35,10 @@ static struct {
 } Background;
 
 // The Bird
-static const float GRAVITY = 250.0;
-static float JUMP_UP = 165.0f;
-static const float MAX_ROTATION = PI/4;
+static float CurrentGravity = STARTER_GRAVITY;
+static float CurrentJumpUp = STARTER_JUMP_UP;
+
+static const float MAX_ROTATION = PI/6;
 static const float MIN_ROTATION = -PI/4;
 static const float DEATH_Y_MIN = -180.0f;
 static const float DEATH_Y_MAX = 180.0f;
@@ -65,8 +75,7 @@ static struct {
 
 // Obstacles...
 static int PlayerScore = 0;
-
-static float OBSTACLE_SPEED = 75.0f;
+static float CurrentObstacleSpeed = STARTER_OBSTACLE_SPEED;
 static const float SPIKE_BLOCK_SPACING = 225.0f;
 static const int SPIKE_BLOCK_ANIMATION_COUNT = 4;
 static const int SPIKE_BLOCK_COUNT = 4;
@@ -167,7 +176,7 @@ void GLAPPY::Application_OnInitialize() {
 
 void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 	if (currentInputState.Mouse.WasMouseKeyPressedThisFrame(gueepo::Mousecode::MOUSE_LEFT)) {
-		MainBird.Acceleration.y = JUMP_UP;
+		MainBird.Acceleration.y = CurrentJumpUp;
 		MainBird.Rotation = MAX_ROTATION;
 	}
 
@@ -179,19 +188,11 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_R)) {
 		MainBird.Position.y = 0.0f;
 	}
-
-	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_W)) {
-		JUMP_UP += 1.0f;
-		LOG_INFO("JUMP UP: {0}", JUMP_UP);
-	}
-
-	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_S)) {
-		JUMP_UP -= 1.0f;
-		LOG_INFO("JUMP UP: {0}", JUMP_UP);
-	}
 }
 
 void GLAPPY::Application_OnUpdate(float DeltaTime) {
+	TimeElapsed += DeltaTime;
+
 	// Background
 	Background.CurrentOffset += DeltaTime * Background.Direction * BACKGROUND_SPEED;
 	if (Background.Direction < 0 && Background.CurrentOffset < 0) {
@@ -210,7 +211,7 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 	}
 
 	// Applying Gravity to the Bird
-	MainBird.Acceleration.y -= (GRAVITY * DeltaTime);
+	MainBird.Acceleration.y -= (CurrentGravity * DeltaTime);
 	MainBird.Position.y += (MainBird.Acceleration.y * DeltaTime);
 
 	// Applying Rotation to the Bird
@@ -231,7 +232,8 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 			SpikeBlock[i].CurrentFrame = (SpikeBlock[i].CurrentFrame + 1) % SPIKE_BLOCK_ANIMATION_COUNT;
 		}
 
-		SpikeBlock[i].Position.x -= OBSTACLE_SPEED * DeltaTime;
+		// moving
+		SpikeBlock[i].Position.x -= CurrentObstacleSpeed * DeltaTime;
 	}
 
 	// Updating Collision
@@ -277,9 +279,8 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 		}
 	}
 
-	// todo: Check for Collisions against Scores
-
 	if (Collided || MainBird.Position.y < DEATH_Y_MIN || MainBird.Position.y > DEATH_Y_MAX) {
+		// todo: change state to death
 		LOG_INFO("Player Collided :(");
 	}
 
@@ -291,6 +292,15 @@ void GLAPPY::Application_OnUpdate(float DeltaTime) {
 
 			SpikeBlock[i].IsScoreRegionEnabled = true;
 		}
+	}
+
+	// Processing Game Difficulty
+	if (TimeElapsed > NextIncreaseTime) {
+		NextIncreaseTime += TIME_TO_INCREASE_DIFFICULTY;
+
+		CurrentObstacleSpeed = CurrentObstacleSpeed * DIFFICULTY_INCREASE_RATE;
+		CurrentJumpUp = CurrentJumpUp * JUMP_UP_DIFFICULTY_INCREASE;
+		CurrentGravity = CurrentGravity * DIFFICULTY_INCREASE_RATE;
 	}
 }
 
