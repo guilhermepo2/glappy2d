@@ -245,6 +245,15 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 		}
 	} break;
 	}
+
+    // DEBUG
+    if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
+        IsDebugEnabled = !IsDebugEnabled;
+    }
+
+    if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_R)) {
+        RestartGame();
+    }
 }
 static void UpdateGameplay(float DeltaTime);
 void GLAPPY::Application_OnUpdate(float DeltaTime) {
