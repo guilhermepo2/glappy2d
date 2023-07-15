@@ -218,10 +218,9 @@ void GLAPPY::Application_OnInitialize() {
 }
 
 void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
-
 	switch (CurrentState) {
 	case GameState::INTRO: {
-		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_E)) {
+		if (currentInputState.Keyboard.IsKeyDown(gueepo::Keycode::KEYCODE_E)) {
 			RestartGame();
 			CurrentState = GameState::GAMEPLAY;
 			MainBird.Acceleration.y = CurrentJumpUp;
@@ -237,7 +236,7 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 		}
 	} break;
 	case GameState::DEAD: {
-		if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_E)) {
+		if (currentInputState.Keyboard.IsKeyDown(gueepo::Keycode::KEYCODE_E)) {
 			RestartGame();
 			CurrentState = GameState::GAMEPLAY;
 			MainBird.Acceleration.y = CurrentJumpUp;
@@ -245,16 +244,6 @@ void GLAPPY::Application_OnInput(const gueepo::InputState& currentInputState) {
 			gueepo::Audio::Play(selectAudioClip);
 		}
 	} break;
-	}
-	
-
-	// DEBUG
-	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_D)) {
-		IsDebugEnabled = !IsDebugEnabled;
-	}
-
-	if (currentInputState.Keyboard.WasKeyPressedThisFrame(gueepo::Keycode::KEYCODE_R)) {
-		RestartGame();
 	}
 }
 static void UpdateGameplay(float DeltaTime);

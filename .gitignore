@@ -1,1 +1,7 @@
 build/
+www/
+
+# clion
+cmake-build-debug/
+.idea
+.DS_Store

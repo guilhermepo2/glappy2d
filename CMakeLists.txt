@@ -49,6 +49,12 @@ if(APPLE)
     endif()
 endif()
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
+    message("emscripten: source dir: " ${CMAKE_SOURCE_DIR})
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-s USE_SDL=2 -s USE_WEBGL2=1 -s EXPORTED_FUNCTIONS=['_main','_malloc'] -s EXPORTED_RUNTIME_METHODS=\"['ccall', 'cwrap']\" --preload-file ../src/assets@assets/")
+    # target_link_options(${PROJECT_NAME} PRIVATE -sEXPORTED_FUNCTIONS=['_malloc','_free'])
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+endif()
 
 if(MSVC)
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
